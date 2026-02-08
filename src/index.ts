@@ -1,1 +1,3 @@
-console.log('FunChat started 🚀');
+import { App } from './app/App';
+
+new App().start();

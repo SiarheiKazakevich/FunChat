@@ -11,12 +11,29 @@ export class App {
 
     const router = new Router(root);
 
-    router.register('/login', LoginPage);
-    router.register('/', MainPage);
-    router.register('/about', AboutPage);
+    // ✅ маршруты с guard-флагами
+    router.register('/login', {
+      handler: LoginPage,
+      guestOnly: true,
+    });
+
+    router.register('/', {
+      handler: MainPage,
+      protected: true,
+    });
+
+    router.register('/about', {
+      handler: AboutPage,
+    });
 
     store.subscribe((state) => {
       console.log('STATE UPDATED:', state);
+
+      if (state.isAuthorized) {
+        router.go('/');
+      } else {
+        router.go('/login');
+      }
     });
 
     router.start();

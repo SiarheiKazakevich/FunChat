@@ -1,7 +1,15 @@
+import { store } from '../store/index';
+
 type RouteHandler = () => HTMLElement;
 
+interface Route {
+  handler: RouteHandler;
+  protected?: boolean; // только для авторизованных
+  guestOnly?: boolean; // только для гостей
+}
+
 export class Router {
-  private routes = new Map<string, RouteHandler>();
+  private routes = new Map<string, Route>();
 
   public constructor(private readonly root: HTMLElement) {
     window.addEventListener('popstate', () => {
@@ -9,8 +17,8 @@ export class Router {
     });
   }
 
-  public register(path: string, handler: RouteHandler): void {
-    this.routes.set(path, handler);
+  public register(path: string, route: Route): void {
+    this.routes.set(path, route);
   }
 
   public go(path: string): void {
@@ -23,14 +31,27 @@ export class Router {
   }
 
   private render(path: string): void {
-    const handler = this.routes.get(path);
+    const route = this.routes.get(path);
 
-    if (!handler) {
+    if (!route) {
       this.root.textContent = '404';
       return;
     }
 
-    const page = handler();
+    const { isAuthorized } = store.getState();
+
+    // 🔹 GUARDS
+    if (route.protected && !isAuthorized) {
+      this.go('/login');
+      return;
+    }
+
+    if (route.guestOnly && isAuthorized) {
+      this.go('/');
+      return;
+    }
+
+    const page = route.handler();
 
     this.root.innerHTML = '';
     this.root.append(page);

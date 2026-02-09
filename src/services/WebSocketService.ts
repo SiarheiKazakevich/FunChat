@@ -3,20 +3,22 @@ type VoidHandler = () => void;
 
 export class WebSocketService {
   private socket: WebSocket | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   private messageHandlers: MessageHandler[] = [];
   private openHandlers: VoidHandler[] = [];
   private closeHandlers: VoidHandler[] = [];
+  private reconnectHandlers: VoidHandler[] = [];
 
-  public constructor(private readonly url: string) { }
+  constructor(private readonly url: string, private readonly reconnectDelay = 3000) { }
 
-  // 🔹 подключение
   public connect(): void {
     if (this.socket) return;
 
     this.socket = new WebSocket(this.url);
 
     this.socket.addEventListener('open', () => {
+      console.log('WS connected');
       this.openHandlers.forEach((h) => h());
     });
 
@@ -26,12 +28,24 @@ export class WebSocketService {
     });
 
     this.socket.addEventListener('close', () => {
+      console.log('WS closed');
       this.socket = null;
       this.closeHandlers.forEach((h) => h());
+
+      // 🔹 авто-reconnect
+      this.reconnectTimer = setTimeout(() => {
+        console.log('WS reconnecting...');
+        this.reconnectHandlers.forEach((h) => h());
+        this.connect();
+      }, this.reconnectDelay);
+    });
+
+    this.socket.addEventListener('error', () => {
+      console.warn('WS error occurred');
+      this.socket?.close();
     });
   }
 
-  // 🔹 отправка
   public send(data: unknown): void {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
       console.warn('Socket not connected');
@@ -41,7 +55,12 @@ export class WebSocketService {
     this.socket.send(JSON.stringify(data));
   }
 
-  // 🔹 подписки
+  public disconnect(): void {
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.socket?.close();
+  }
+
+  // Подписки
   public onMessage(handler: MessageHandler): void {
     this.messageHandlers.push(handler);
   }
@@ -54,8 +73,7 @@ export class WebSocketService {
     this.closeHandlers.push(handler);
   }
 
-  // 🔹 закрытие
-  public disconnect(): void {
-    this.socket?.close();
+  public onReconnect(handler: VoidHandler): void {
+    this.reconnectHandlers.push(handler);
   }
 }

@@ -8,7 +8,15 @@ import { WebSocketService } from '../services/WebSocketService';
 export class App {
   public start(): void {
 
-    const socket = new WebSocketService('ws://localhost:3000'); // ← порт сервера из задания
+    const socket = new WebSocketService('ws://localhost:4000'); // ← порт сервера из задания
+    //const socket = new WebSocketService('ws://localhost:8080');
+
+    socket.onOpen(() => console.log('WS connected'));
+    socket.onClose(() => console.log('WS disconnected'));
+    socket.onReconnect(() => console.log('WS reconnecting...'));
+
+    socket.onMessage((msg) => console.log('WS message:', msg));
+
 
     socket.connect();
 

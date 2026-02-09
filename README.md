@@ -1,1 +1,1 @@
-# FunChat.
+https://SiarheiKazakevich.github.io/FunChat
